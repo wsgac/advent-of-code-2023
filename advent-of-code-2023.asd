@@ -9,4 +9,5 @@
   :depends-on (:cl-ppcre :trivia :alexandria)
   :components ((:file "package")
 	       (:file "util")
-	       (:file "day01")))
+	       (:file "day01")
+	       (:file "day02")))
