@@ -1,15 +1,19 @@
 (in-package #:advent-of-code-2023.day02)
 
-;; (setf *line-parser-regexp* "Game ([0-9]+):(( ?([0-9]+) (red|green|blue),?)+;?)+")
-(defvar *total-cubes* '(("red" . 12) ("green" . 13) ("blue" . 14)))
+(defvar *total-cubes* '(("red" . 12) ("green" . 13) ("blue" . 14))
+  "Total numbers of cubes of each color stored as an alist.")
 
 (defun split-game-line (line)
+  "Process LINE by first splitting it on the colon and then processing
+each number-color pairs to the right. Since we care about overall game
+possibility, there's no need to group numbers by game."
   (let (plist)
     (destructuring-bind (game results)
 	(uiop:split-string line :separator '(#\:))
       (setf (getf plist :game-id)
 	    (ppcre:register-groups-bind (game-id)
 		("Game ([0-9]+)" game)
+	      (declare (type string game-id))
 	      (parse-integer game-id)))
       (ppcre:do-register-groups (num col)
 	  ("([0-9]+) (red|green|blue)" results)
@@ -18,6 +22,9 @@
     plist))
 
 (defun game-possible-p (game-plist &key (reference *total-cubes*))
+  "Check the possibility of GAME-PLIST by checking each number-color
+pair against REFERENCE. Game is possible if none of the numbers are
+greater than the max values in REFERENCE."
   (every #'(lambda (result)
 	     (<= (cdr result) (cdr (assoc (car result) reference :test #'equal))))
 	 (getf game-plist :game-results)))
@@ -27,8 +34,27 @@
 	  (mapcar (alexandria:rcurry #'getf :game-id)
 		  (remove-if-not #'game-possible-p (mapcar #'split-game-line input)))))
 
+(defun extract-max-values (alist)
+  "Extract per-color maximum values from ALIST."
+  (loop
+    with result
+    for (color . number) in alist
+    do (alexandria:if-let (it (assoc color result :test #'equal))
+	 (setf (cdr (assoc color result :test #'equal)) (max number (cdr it)))
+	 (pushnew (cons color number) result))
+    finally (return result)))
+
+(defun compute-power (alist)
+  "Compute a game's power by multiplying per-color max values."
+  (reduce #'* (mapcar #'cdr alist)))
+
 (defun puzzle-2 (&key (input *example-input-2*))
-  )
+  (reduce #'+
+	  (mapcar (alexandria:compose (alexandria:curry #'reduce #'*)
+				      (alexandria:curry #'mapcar #'cdr)
+				      #'extract-max-values
+				      (alexandria:rcurry #'getf :game-results)
+				      #'split-game-line) input)))
 
 ;;;; Data
 
@@ -142,7 +168,7 @@ Game 99: 15 green, 1 blue, 11 red; 12 green, 12 blue, 14 red; 12 green, 10 blue,
 Game 100: 1 green, 11 red, 4 blue; 4 green, 1 red; 9 red, 2 blue; 5 blue, 11 red, 9 green" :separator '(#\Newline)))
 
 
-;; (defvar *example-input-2*
-;;   )
+(defvar *example-input-2*
+  *example-input-1*)
 
-;; (defvar *input-2* )
+(defvar *input-2* *input-1*)
