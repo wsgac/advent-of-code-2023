@@ -1,7 +1,5 @@
 (in-package #:advent-of-code-2023.day01)
 
-
-
 (defun extract-digits (line)
   "Plain simple digit recognition and conversion to numeric values."
   (loop
@@ -32,6 +30,8 @@
 								       (alexandria:iota 10)))
   "Regexp to match any representation of a digit, be it verbal or numeric.")
 
+;; Previous approach
+#+nil
 (defun extract-digits-and-digit-names (line)
   "A hackish hack to extract all digit matches, even overlapping ones. I
 wanted to use PPCRE:ALL-MATCHES-AS-STRINGS like a civilized person,
@@ -43,6 +43,20 @@ problem."
     do (multiple-value-setq (start end) (ppcre:scan *regexp-digit-matcher* line :start (1+ start)))
     while start
     collect (gethash (subseq line start end) *digit-names-to-values*)))
+
+(defun extract-digits-and-digit-names (line)
+  "A hackish hack to extract all digit matches, even overlapping ones. I
+wanted to use PPCRE:ALL-MATCHES-AS-STRINGS like a civilized person,
+but that gave me non-overlapping matches and it turns out to be a
+problem."
+  (labels ((process-digits (line start acc)
+	     (multiple-value-bind (s e)
+		 (ppcre:scan *regexp-digit-matcher* line :start start)
+	       (if s
+		   (process-digits line (1+ s)
+				   (cons (gethash (subseq line s e) *digit-names-to-values*) acc))
+		   acc))))
+    (process-digits line 0 nil)))
 
 (defun puzzle-2 (&key (input *example-input-2*))
   (reduce #'+
