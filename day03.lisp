@@ -1,32 +1,62 @@
 (in-package #:advent-of-code-2023.day03)
 
 
-(defun locate-part-numbers (input)
-  (labels ((neighbor-symbol-p (start end symbols columns)
-	     (let* ((left (if (zerop (mod start columns)) start (1- start)))
-		    (right (if (zerop (mod (1+ start) columns)) end (1+ end)))
-		    (top (>= start columns))
-		    (bottom (< end (- (length input) columns))))
-	       ;; (break)
-	       ;; (break "Data: ~a" (list start left end right top bottom (subseq input start end)))
-	       (or (some #'(lambda (s) (<= left s right)) symbols)
-		   (and top (some #'(lambda (s) (<= (- left columns) s (- right columns))) symbols))
-		   (and bottom (some #'(lambda (s) (<= (+ left columns) s (+ right columns))) symbols))))))
-   (let* ((numbers (ppcre:all-matches "[0-9]+" input))
-	  (symbols (ppcre:all-matches "[^0-9\\n.]" input))
-	  (symbols (loop
-		     for (a _) on symbols by #'cddr collect a))
-	  (rows (uiop:split-string input :separator '(#\Newline)))
-	  (columns (length (car rows))))
-     (loop
-       for (a b) on numbers by #'cddr
-       if (neighbor-symbol-p a b symbols (1+ columns))
-	 collect (parse-integer (subseq input a b)))
-     ;; (loop for s in symbols collect (cons s (subseq input s (1+ s))))
-     )))
+(defun parse-line (line)
+  (let* ((chars (length line))
+	(numbers (loop
+		   for (s e) on (ppcre:all-matches "[0-9]+" line) by #'cddr
+		   collect (list :number (parse-integer (subseq line s e))
+				 :start (max 0 (1- s)) :end (min (1- chars) (1+ e)))))
+	(symbols (loop
+		   for (a _) on (ppcre:all-matches "[^0-9.]" line) by #'cddr
+		   collect a)))
+    (list :numbers numbers :symbols symbols)))
+
+(defun extract-part-numbers (prev line next)
+  (labels ((neighbors-on-symbols (number)
+	     (let ((s (getf number :start))
+		   (e (getf number :end)))
+	       (or (some #'(lambda (sym) (<= s sym e)) (getf line :symbols))
+		   (and prev (some #'(lambda (sym) (<= s sym e)) (getf prev :symbols)))
+		   (and next (some #'(lambda (sym) (<= s sym e)) (getf next :symbols)))))))
+   (mapcar (alexandria:rcurry #'getf :number)
+	   (remove-if-not #'neighbors-on-symbols (getf line :numbers)))))
+
+
+
+
+;; (defun locate-part-numbers (input)
+;;   (labels ((neighbor-symbol-p (start end symbols columns)
+;; 	     (let* ((left (if (zerop (mod start columns)) start (1- start)))
+;; 		    (right (if (zerop (mod (1+ start) columns)) end (1+ end)))
+;; 		    (top (>= start columns))
+;; 		    (bottom (< end (- (length input) columns))))
+;; 	       ;; (break)
+;; 	       ;; (break "Data: ~a" (list start left end right top bottom (subseq input start end)))
+;; 	       (or (some #'(lambda (s) (<= left s right)) symbols)
+;; 		   (and top (some #'(lambda (s) (<= (- left columns) s (- right columns))) symbols))
+;; 		   (and bottom (some #'(lambda (s) (<= (+ left columns) s (+ right columns))) symbols))))))
+;;    (let* ((numbers (ppcre:all-matches "[0-9]+" input))
+;; 	  (symbols (ppcre:all-matches "[^0-9\\n.]" input))
+;; 	  (symbols (loop
+;; 		     for (a _) on symbols by #'cddr collect a))
+;; 	  (rows (uiop:split-string input :separator '(#\Newline)))
+;; 	  (columns (length (car rows))))
+;;      (loop
+;;        for (a b) on numbers by #'cddr
+;;        if (neighbor-symbol-p a b symbols (1+ columns))
+;; 	 collect (parse-integer (subseq input a b)))
+;;      ;; (loop for s in symbols collect (cons s (subseq input s (1+ s))))
+;;      )))
 
 (defun puzzle-1 (&key (input *example-input-1*))
-  (reduce #'+ (locate-part-numbers input)))
+  (loop
+    for prev = nil then line
+    for line = nil then next
+    for next in (append (mapcar #'parse-line input) '(nil))
+    when line
+      nconc (extract-part-numbers prev line next) into nums
+    finally (return (reduce #'+ nums))))
 
 (defun puzzle-2 (&key (input *example-input-2*))
   )
@@ -34,7 +64,8 @@
 ;;;; Data
 
 (setf *example-input-1*
-      "467..114..
+      (uiop:split-string
+       "467..114..
 ...*......
 ..35..633.
 ......#...
@@ -43,10 +74,11 @@
 ..592.....
 ......755.
 ...$.*....
-.664.598..")
+.664.598.." :separator '(#\newline)))
 
 (setf *input-1*
-  "......124..................418.......587......770...........672.................564............................438..........512......653....
+      (uiop:split-string
+       "......124..................418.......587......770...........672.................564............................438..........512......653....
 665/...*......................*599.....*.983......794*..140..*...........@..963*....................445........*......*.........709.....*...
 .......246.....581......701..........108....%.532........../.73..699...927............................*....579.354.464..............298..86.
 ........................*.....@...............%........$............+.........167..................408............................$..*......
@@ -185,7 +217,8 @@
 ..............397.........803...84............627..........704.983..........*................522............................*....541........
 .....32....$.....#...643*..............116........./905......*..../...........311......811$.*........*890..........924..670........=....882.
 ......*.....81.....*.....636.......317...*...................899.............*....*698............626....................-..+..@.......*....
-.......877......256.714...................825.........458....................869..............................54............28.823..110.....")
+.......877......256.714...................825.........458....................869..............................54............28.823..110....."
+       :separator '(#\newline)))
 
 (defvar *example-input-2*
   *example-input-1*)
