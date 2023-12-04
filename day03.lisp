@@ -2,25 +2,39 @@
 
 
 (defun locate-part-numbers (input)
-  (let* ((numbers (ppcre:all-matches "[0-9]+" input))
-	 (symbols (ppcre:all-matches "[^0-9\\n.]+" input))
-	 (symbols (loop
-			for (a _) on symbols by #'cddr collect a))
-	 (rows (uiop:split-string input :separator '(#\Newline)))
-	 (columns (length (car rows))))
-    (loop
-	  for (a b) on numbers on #'cddr)))
+  (labels ((neighbor-symbol-p (start end symbols columns)
+	     (let* ((left (if (zerop (mod start columns)) start (1- start)))
+		    (right (if (zerop (mod (1+ start) columns)) end (1+ end)))
+		    (top (>= start columns))
+		    (bottom (< end (- (length input) columns))))
+	       ;; (break)
+	       ;; (break "Data: ~a" (list start left end right top bottom (subseq input start end)))
+	       (or (some #'(lambda (s) (<= left s right)) symbols)
+		   (and top (some #'(lambda (s) (<= (- left columns) s (- right columns))) symbols))
+		   (and bottom (some #'(lambda (s) (<= (+ left columns) s (+ right columns))) symbols))))))
+   (let* ((numbers (ppcre:all-matches "[0-9]+" input))
+	  (symbols (ppcre:all-matches "[^0-9\\n.]" input))
+	  (symbols (loop
+		     for (a _) on symbols by #'cddr collect a))
+	  (rows (uiop:split-string input :separator '(#\Newline)))
+	  (columns (length (car rows))))
+     (loop
+       for (a b) on numbers by #'cddr
+       if (neighbor-symbol-p a b symbols (1+ columns))
+	 collect (parse-integer (subseq input a b)))
+     ;; (loop for s in symbols collect (cons s (subseq input s (1+ s))))
+     )))
 
 (defun puzzle-1 (&key (input *example-input-1*))
-  )
+  (reduce #'+ (locate-part-numbers input)))
 
 (defun puzzle-2 (&key (input *example-input-2*))
   )
 
 ;;;; Data
 
-(defvar *example-input-1*
-  "467..114..
+(setf *example-input-1*
+      "467..114..
 ...*......
 ..35..633.
 ......#...
@@ -31,7 +45,7 @@
 ...$.*....
 .664.598..")
 
-(defvar *input-1*
+(setf *input-1*
   "......124..................418.......587......770...........672.................564............................438..........512......653....
 665/...*......................*599.....*.983......794*..140..*...........@..963*....................445........*......*.........709.....*...
 .......246.....581......701..........108....%.532........../.73..699...927............................*....579.354.464..............298..86.
@@ -43,7 +57,7 @@
 ..........324...............431..58..533-../..-...../......*405.................$.............47..474..............*......*.......930.*.....
 ............/.....*350....................400.502...............$...........168.......855.635....................258.......794...+.....846..
 ........................560...72.945..............866..........783..328....*....116......*...........179..904........682$..........333......
-.....674...........1#52....*....*....*815.........*........$609.............737../................583*........*.84..............767*.........
+.....674...........152....*....*....*815.........*........$609.............737../................583*........*.84..............767*.........
 ..../......55@....+........645.914................987..................*..........972.........#.......80..750........588................=260
 .....................349&...................../.................754.407..203*720./.......207...14...............=88...+...767...............
 .........*824.............890.......269....893..271*139..645....*...................233...%................428...........*.........79.......
