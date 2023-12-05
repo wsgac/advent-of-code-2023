@@ -6,7 +6,8 @@
 	(numbers (loop
 		   for (s e) on (ppcre:all-matches "[0-9]+" line) by #'cddr
 		   collect (list :number (parse-integer (subseq line s e))
-				 :start (max 0 (1- s)) :end (min (1- chars) (1+ e)))))
+				 :start (max 0 (1- s)) :end e ;; (min (1- chars) (1+ e))
+				 )))
 	(symbols (loop
 		   for (a _) on (ppcre:all-matches "[^0-9.]" line) by #'cddr
 		   collect a)))
@@ -21,9 +22,6 @@
 		   (and next (some #'(lambda (sym) (<= s sym e)) (getf next :symbols)))))))
    (mapcar (alexandria:rcurry #'getf :number)
 	   (remove-if-not #'neighbors-on-symbols (getf line :numbers)))))
-
-
-
 
 ;; (defun locate-part-numbers (input)
 ;;   (labels ((neighbor-symbol-p (start end symbols columns)
@@ -57,6 +55,8 @@
     when line
       nconc (extract-part-numbers prev line next) into nums
     finally (return (reduce #'+ nums))))
+
+
 
 (defun puzzle-2 (&key (input *example-input-2*))
   )

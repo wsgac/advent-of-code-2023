@@ -3,7 +3,8 @@
 (defpackage #:advent-of-code-2023.util
   (:nicknames #:aoc2023.util #:util)
   (:use #:cl)
-  (:export :transpose))
+  (:export :transpose
+	   :histogram))
 
 (defpackage #:advent-of-code-2023.day01
   (:nicknames #:aoc2023.day01)
