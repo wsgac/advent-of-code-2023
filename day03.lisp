@@ -1,17 +1,17 @@
 (in-package #:advent-of-code-2023.day03)
 
 
-(defun parse-line (line)
+(defun parse-line (line n &key gears-only)
   (let* ((chars (length line))
-	(numbers (loop
-		   for (s e) on (ppcre:all-matches "[0-9]+" line) by #'cddr
-		   collect (list :number (parse-integer (subseq line s e))
-				 :start (max 0 (1- s)) :end e ;; (min (1- chars) (1+ e))
-				 )))
-	(symbols (loop
-		   for (a _) on (ppcre:all-matches "[^0-9.]" line) by #'cddr
-		   collect a)))
-    (list :numbers numbers :symbols symbols)))
+	 (numbers (loop
+		    for (s e) on (ppcre:all-matches "[0-9]+" line) by #'cddr
+		    collect (list :number (parse-integer (subseq line s e))
+				  :start (max 0 (1- s)) :end e ;; (min (1- chars) (1+ e))
+				  )))
+	 (symbols (loop
+		    for (a _) on (ppcre:all-matches (if gears-only "\\*" "[^0-9.]") line) by #'cddr
+		    collect a)))
+    (list :line n :numbers numbers :symbols symbols)))
 
 (defun extract-part-numbers (prev line next)
   (labels ((neighbors-on-symbols (number)
@@ -20,8 +20,28 @@
 	       (or (some #'(lambda (sym) (<= s sym e)) (getf line :symbols))
 		   (and prev (some #'(lambda (sym) (<= s sym e)) (getf prev :symbols)))
 		   (and next (some #'(lambda (sym) (<= s sym e)) (getf next :symbols)))))))
-   (mapcar (alexandria:rcurry #'getf :number)
-	   (remove-if-not #'neighbors-on-symbols (getf line :numbers)))))
+    (mapcar (alexandria:rcurry #'getf :number)
+	    (remove-if-not #'neighbors-on-symbols (getf line :numbers)))))
+
+(defun extract-gears (prev line next)
+  (let ((h (make-hash-table :test #'equalp))
+	(l (getf line :line)))
+    (labels ((neighbors-on-symbols (number)
+	       (let ((s (getf number :start))
+		     (e (getf number :end)))
+		 (mapc #'(lambda (sym)
+			   (when (<= s sym e) (push (getf number :number) (gethash (list l sym) h nil))
+				 (format t "~a~%" (list l sym)))) (getf line :symbols))
+		 (when prev (mapc #'(lambda (sym)
+				      (when (<= s sym e) (push (getf number :number) (gethash (list (getf prev :line) sym) h nil))
+					    (format t "~a~%" (list (getf prev :line) sym))))
+				  (getf prev :symbols)))
+		 (when next (mapc #'(lambda (sym)
+				      (when (<= s sym e) (push (getf number :number) (gethash (list (getf next :line) sym) h nil))
+					    (format t "~a~%" (list (getf next :line) sym))))
+				  (getf next :symbols))))))
+      (mapcar #'neighbors-on-symbols (getf line :numbers))
+      h)))
 
 ;; (defun locate-part-numbers (input)
 ;;   (labels ((neighbor-symbol-p (start end symbols columns)
@@ -51,7 +71,7 @@
   (loop
     for prev = nil then line
     for line = nil then next
-    for next in (append (mapcar #'parse-line input) '(nil))
+    for next in (append (mapcar #'parse-line input (alexandria:iota (length input))) '(nil))
     when line
       nconc (extract-part-numbers prev line next) into nums
     finally (return (reduce #'+ nums))))
@@ -59,7 +79,20 @@
 
 
 (defun puzzle-2 (&key (input *example-input-2*))
-  )
+  (loop
+    with h = (make-hash-table :test #'equal)
+    for prev = nil then line
+    for line = nil then next
+    for next in (append (mapcar (alexandria:rcurry #'parse-line :gears-only t)
+				input (alexandria:iota (length input)))
+			'(nil))
+    when line
+      do (maphash #'(lambda (k v) (setf (gethash k h) (append v (gethash k h nil))))
+		  (extract-gears prev line next))
+    finally (return (loop
+		      for v being the hash-values in h
+		      if (= 2 (length v))
+			sum (reduce #'* v)))))
 
 ;;;; Data
 
