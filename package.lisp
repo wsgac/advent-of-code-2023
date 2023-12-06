@@ -8,7 +8,8 @@
    :histogram
    :split-lines
    :square
-   :^2))
+   :^2
+   :join-numbers))
 
 (defpackage #:advent-of-code-2023.day01
   (:nicknames #:aoc2023.day01)

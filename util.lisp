@@ -16,3 +16,6 @@
 (defun square (x)
   (* x x))
 (setf (fdefinition '^2) #'square)
+
+(defun join-numbers (a b)
+  (+ (* a (expt 10 (ceiling (log b 10)))) b))
