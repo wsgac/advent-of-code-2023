@@ -12,3 +12,7 @@
 
 (defun split-lines (string)
   (uiop:split-string string :separator '(#\Newline)))
+
+(defun square (x)
+  (* x x))
+(setf (fdefinition '^2) #'square)
