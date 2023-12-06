@@ -4,7 +4,8 @@
   (:nicknames #:aoc2023.util #:util)
   (:use #:cl)
   (:export :transpose
-	   :histogram))
+	   :histogram
+	   :split-lines))
 
 (defpackage #:advent-of-code-2023.day01
   (:nicknames #:aoc2023.day01)

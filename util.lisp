@@ -9,3 +9,6 @@
     for el in list
     do (incf (gethash el h 0))
     finally (return h)))
+
+(defun split-lines (string)
+  (uiop:split-string string :separator '(#\Newline)))
