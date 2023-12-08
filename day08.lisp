@@ -12,25 +12,40 @@
 					   (string-to-directions directions))))
 	  mappings)
       (ppcre:do-register-groups (node left right)
-	  ("([A-Z]{3}) = \\(([A-Z]{3}), ([A-Z]{3})\\)" map)
+	  ("([A-Z0-9]{3}) = \\(([A-Z0-9]{3}), ([A-Z0-9]{3})\\)" map)
 	(setf (getf mappings (alexandria:make-keyword node))
 	      (list :l (alexandria:make-keyword left)
 		    :r (alexandria:make-keyword right))))
       (setf (getf parsed :map) mappings)
       parsed)))
 
+(defun count-nodes (map directions init-node &key terminalp)
+  (loop
+      for steps from 0
+      for node = init-node then (getf (getf map node) d)
+      for d in directions
+      until (funcall terminalp node)
+      finally (return steps)))
+
 (defun puzzle-1 (&key (input *example-input-1*))
   (destructuring-bind (&key map directions)
       (parse-data input)
-    (loop
-      for steps from 0
-      for node = :aaa then (getf (getf map node) d)
-      for d in directions
-      until (eql node :zzz)
-      finally (return steps))))
+    (count-nodes map directions :aaa :terminalp #'(lambda (n) (eql n :zzz)))))
 
 (defun puzzle-2 (&key (input *example-input-2*))
- )
+  (labels ((initial (sym)
+	     (char= #\A (elt (symbol-name sym) 2)))
+	   (terminal (sym)
+	     (char= #\Z (elt (symbol-name sym) 2))))
+   (destructuring-bind (&key map directions)
+       (parse-data input)
+     (loop
+       for node in (remove-if-not #'initial
+				  (loop
+				    for (k _) on map by #'cddr
+				    collect k))
+       collect (count-nodes map directions node :terminalp #'terminal) into periods
+       finally (return (apply #'lcm periods))))))
 
 ;;;; Data
 
@@ -784,6 +799,15 @@ GXP = (SCK, GXF)
 QBX = (SBH, SGR)")
 
 (defvar *example-input-2*
-  *example-input-1*)
+  "LR
+
+11A = (11B, XXX)
+11B = (XXX, 11Z)
+11Z = (11B, XXX)
+22A = (22B, XXX)
+22B = (22C, 22C)
+22C = (22Z, 22Z)
+22Z = (22B, 22B)
+XXX = (XXX, XXX)")
 
 (defvar *input-2* *input-1*)
