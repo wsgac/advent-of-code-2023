@@ -1,24 +1,35 @@
 (in-package #:advent-of-code-2023.day07)
 
 (defun parse-data (data)
+  "Parse input DATA into a convenient list of hand-bid pairs where hands
+are represented as 5-character strings."
   (let (pairs)
    (ppcre:do-register-groups (cards bid) ("([A-Z0-9]+) ([0-9]+)" data pairs)
-     (push (cons cards (parse-integer bid)) pairs)))
-  )
+     (push (cons cards (parse-integer bid)) pairs))))
 
-(defvar *card-hierarchy*
+(defvar *card-hierarchy-1*
   (loop
     for i from 0
     for c across "23456789TJQKA"
-    collect (cons c i)))
+    collect (cons c i))
+  "Alist of relative card importance for the first puzzle")
+
+(defvar *card-hierarchy-2*
+  (loop
+    for i from 0
+    for c across "J23456789TQKA"
+    collect (cons c i))
+  "Alist of relative card importance for the second puzzle")
 
 (defvar *hand-hierarchy*
   (loop
     for i from 0
     for h in '(:high-card :one-pair :two-pair :three-of-a-kind :full-house :four-of-a-kind :five-of-a-kind)
-    collect (cons h i)))
+    collect (cons h i))
+  "Alist of relative hand-type importance")
 
 (defun classify-hand (hand)
+  "Classify HAND as one of the types based on character occurrence analysis."
   (loop
     with h = (make-hash-table)
     for c across hand
@@ -46,10 +57,28 @@
 			 (t :high-card))
 		       hh)))))
 
-(defun hand< (h1 h2)
-  (let* ((h1-type (classify-hand h1))
+(defun classify-hand-with-jokers (hand)
+  "Classify HAND as the highest possible type, given its jokers. If HAND
+has no jokers, use ordinary CLASSIFY-HAND. Otherwise, iterate through
+all possible substitutes and pick the highest classification."
+  (if (find #\J hand)
+      (loop
+	for (c . _) in (rest *card-hierarchy-2*)
+	for candidate = (classify-hand (substitute c #\J hand))
+	collect (cons candidate (cdr (assoc candidate *hand-hierarchy*))) into hands
+	finally (return (car (first (sort hands #'> :key #'cdr)))))
+      (classify-hand hand)))
+
+(defun hand< (h1 h2 &key (classifier #'classify-hand)
+		      (card-hierarchy *card-hierarchy-1*))
+  "Compare whether hand H1 represents a lower rank than H2. First,
+compare their classifications. If there is a tie, compare hands on a
+card-by-card basis, going in order. Use :CLASSIFIER to provide custom
+classifier function. Use :CARD-HIERARCHY to specify which card
+hierarchy to use for comparisons."
+  (let* ((h1-type (funcall classifier h1))
 	 (h1-hier (cdr (assoc h1-type *hand-hierarchy*)))
-	 (h2-type (classify-hand h2))
+	 (h2-type (funcall classifier h2))
 	 (h2-hier (cdr (assoc h2-type *hand-hierarchy*))))
     (cond
       ((< h1-hier h2-hier) t)
@@ -57,11 +86,11 @@
       (t (loop
 	   for c1 across h1
 	   for c2 across h2
-	   if (< (cdr (assoc c1 *card-hierarchy*))
-		 (cdr (assoc c2 *card-hierarchy*)))
+	   if (< (cdr (assoc c1 card-hierarchy))
+		 (cdr (assoc c2 card-hierarchy)))
 	     return t
-	   if (> (cdr (assoc c1 *card-hierarchy*))
-		 (cdr (assoc c2 *card-hierarchy*)))
+	   if (> (cdr (assoc c1 card-hierarchy))
+		 (cdr (assoc c2 card-hierarchy)))
 	     return nil
 	   finally (return t))))))
 
@@ -72,7 +101,14 @@
     sum (* rank bet)))
 
 (defun puzzle-2 (&key (input *example-input-2*))
-)
+  (loop
+    for rank from 1
+    for (hand . bet) in (sort (parse-data input)
+			      (alexandria:rcurry #'hand<
+						 :classifier #'classify-hand-with-jokers
+						 :card-hierarchy *card-hierarchy-2*)
+			      :key #'car)
+    sum (* rank bet)))
 
 ;;;; Data
 
