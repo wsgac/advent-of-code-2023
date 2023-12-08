@@ -39,5 +39,9 @@
   (:nicknames #:aoc2023.day07)
   (:use #:cl #:util))
 
+(defpackage #:advent-of-code-2023.day08
+  (:nicknames #:aoc2023.day08)
+  (:use #:cl #:util))
+
 
 
