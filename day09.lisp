@@ -12,23 +12,32 @@
     while b
     collect (- b a)))
 
-(defun compute-difference-cascade (numbers &optional acc)
+(defun compute-difference-cascade (numbers &key acc rev)
   (if (every #'zerop numbers)
-      (cons (reverse numbers) acc)
+      (cons (funcall (if rev #'reverse #'identity) numbers) acc)
       (compute-difference-cascade (compute-differences numbers)
-				  (cons (reverse numbers) acc))))
+				  :acc (cons (funcall (if rev #'reverse #'identity) numbers) acc)
+				  :rev rev)))
 
-(defun extrapolate (cascade)
-  (reduce #'(lambda (acc lst) (+ (first lst) acc))
+(defun extrapolate (cascade &key begin)
+  (reduce #'(lambda (acc lst) (if begin
+				  (- (first lst) acc)
+				  (+ acc (first lst))))
 	  (cdr cascade) :initial-value 0))
 
 (defun puzzle-1 (&key (input *example-input-1*))
   (reduce #'+
-	  (mapcar (alexandria:compose #'extrapolate #'compute-difference-cascade)
+	  (mapcar (alexandria:compose #'extrapolate
+				      (alexandria:rcurry #'compute-difference-cascade
+							 :rev t))
 		  (parse-data input))))
 
 (defun puzzle-2 (&key (input *example-input-2*))
- )
+  (reduce #'+
+	  (mapcar (alexandria:compose (alexandria:rcurry #'extrapolate :begin t)
+				      (alexandria:rcurry #'compute-difference-cascade
+							 :rev nil))
+		  (parse-data input))))
 
 ;;;; Data
 
