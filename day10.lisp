@@ -66,8 +66,30 @@ there. Assume r going to the right and c going down.")
 	while (or n1 n2)
 	finally (return step)))))
 
+(defun shoelace (contour)
+  (loop
+    for ((r1 c1) (r2 c2)) on contour by #'cdr
+    while (and r2 c2)
+    sum (- (* r1 c2) (* r2 c1)) into area
+    finally (return
+	      (let ((last (car (last contour))))
+		(+ (/ (+ area (- (* (first last) (second (first contour)))
+			       (* (second last) (first (first contour)))))
+		      2)
+		   1
+		   (- (/ (length contour) 2)))))))
+
 (defun puzzle-2 (&key (input *example-input-2*))
-)
+  (multiple-value-bind (arr init)
+      (find-and-replace-s (parse-data input))
+    (let ((contour (list init)))
+      (loop
+	with n = (first (apply #'neighbors arr init))
+	do (push n contour)
+	do (setf n (first (remove-if #'(lambda (n) (member n contour :test #'equal))
+				     (apply #'neighbors arr n))))
+	while n)
+      (shoelace contour))))
 
 ;;;; Data
 
@@ -221,6 +243,14 @@ F77|LF|7F7L77L|.J.|JL|-7||LLFFJJJ7FJ||--7F7.FL-|FJ77|-LJFJF7FJ|L-J|7FFJ7F-7--L|7
 L-JJL-JJJL7JL-L-JJJFJJLF-L-.F7.|LLL--J7J-LFL7L|JJJF-J7..L-JLJJL---J-LF-LJJL7.LLJJJJJLJ.L|J-LFLJL-L--|JJ-LLJL|J-|.-J|.L|JL|JJ.FF--7L-FJ-LJ.J-")
 
 (defvar *example-input-2*
-  *example-input-1*)
+  "...........
+.S-------7.
+.|F-----7|.
+.||.....||.
+.||.....||.
+.|L-7.F-J|.
+.|..|.|..|.
+.L--J.L--J.
+...........")
 
 (defvar *input-2* *input-1*)
