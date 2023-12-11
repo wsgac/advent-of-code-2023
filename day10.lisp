@@ -1,20 +1,5 @@
 (in-package #:advent-of-code-2023.day10)
 
-(defun parse-data (data)
-  (let ((char-array (mapcar (alexandria:rcurry #'coerce 'list)
-			    (split-lines data))))
-    (make-array (list (length char-array) (length (first char-array)))
-		:initial-contents char-array)))
-
-(defun position-in-2d-array (item array)
-  (destructuring-bind (d1 d2) (array-dimensions array)
-    (loop
-      for x1 from 0 below d1
-      do (loop
-	   for x2 from 0 below d2
-	   when (equal item (aref array x1 x2))
-	     do (return-from position-in-2d-array (list x1 x2))))))
-
 (defvar *pipe-to-directions*
   '(#\| ((-1 . 0) (1 . 0))
     #\- ((0 . -1) (0 . 1))
@@ -51,7 +36,7 @@ there. Assume r going to the right and c going down.")
 
 (defun puzzle-1 (&key (input *example-input-1*))
   (multiple-value-bind (arr init)
-      (find-and-replace-s (parse-data input))
+      (find-and-replace-s (parse-string-into-array input))
     (let ((h (make-hash-table :test #'equal)))
       (setf (gethash init h) t)
       (loop
@@ -81,7 +66,7 @@ there. Assume r going to the right and c going down.")
 
 (defun puzzle-2 (&key (input *example-input-2*))
   (multiple-value-bind (arr init)
-      (find-and-replace-s (parse-data input))
+      (find-and-replace-s (parse-string-into-array input))
     (let ((contour (list init)))
       (loop
 	with n = (first (apply #'neighbors arr init))

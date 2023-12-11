@@ -9,7 +9,10 @@
    :split-lines
    :square
    :^2
-   :join-numbers))
+   :join-numbers
+   :position-in-2d-array
+   :parse-string-into-array
+   :parse-string-into-list))
 
 (defpackage #:advent-of-code-2023.day01
   (:nicknames #:aoc2023.day01)
@@ -49,4 +52,8 @@
 
 (defpackage #:advent-of-code-2023.day10
   (:nicknames #:aoc2023.day10)
+  (:use #:cl #:util))
+
+(defpackage #:advent-of-code-2023.day11
+  (:nicknames #:aoc2023.day11)
   (:use #:cl #:util))
