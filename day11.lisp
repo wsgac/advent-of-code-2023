@@ -64,8 +64,24 @@ duplication easier."
 		      for el2 in els
 		      sum (distance el1 el2))))))
 
-(defun puzzle-2 (&key (input *example-input-2*))
-)
+(defun puzzle-2 (&key (input *example-input-2*) (expansion-factor 1000000))
+  (labels ((distance (el1 el2)
+	     (+ (abs (- (car el2) (car el1)))
+		(abs (- (cdr el2) (cdr el1))))))
+    (let* ((data (parse-string-into-list input))
+	   (galaxies (find-galaxies data))
+	   (empties (find-empty-rows-and-columns data))
+	   (expanded (loop
+		       for (gr . gc) in galaxies
+		       for gr-increment = (* (1- expansion-factor) (count-if #'(lambda (er) (< er gr)) (first empties)))
+		       for gc-increment = (* (1- expansion-factor) (count-if #'(lambda (ec) (< ec gc)) (second empties)))
+		       collect (cons (+ gr gr-increment)
+				     (+ gc gc-increment)))))
+      (loop
+	for (el1 . els) on expanded
+	sum (loop
+	      for el2 in els
+	      sum (distance el1 el2))))))
 
 ;;;; Data
 
