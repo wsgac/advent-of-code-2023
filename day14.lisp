@@ -3,11 +3,14 @@
 (defun parse-data (data)
   "Parse DATA as a list of rows and then transpose it so that north is to
 the left."
-  (mapcar (alexandria:rcurry #'coerce 'string)
-	  (transpose (mapcar (alexandria:rcurry #'coerce 'list)
-			     (split-lines data)))))
+  (mapcar (alexandria:rcurry #'coerce 'list)
+	  (split-lines data)))
 
-;; (defun rotate-counterclockwise (data))
+(defun rotate-counterclockwise (data)
+  (reverse (transpose data)))
+
+(defun rotate-clockwise (data)
+  (mapcar #'reverse (transpose data)))
 
 (defun detect-round-rock-stretches (row)
   (loop
@@ -24,10 +27,11 @@ the left."
 		:start1 s :end1 e)
     finally (return row)))
 
-(defun tilt-north (data)
+(defun tilt-left (data)
   (loop
-    for row in data
-    collect (adjust-rock-stretches row (detect-round-rock-stretches row))))
+    for r in data
+    for row = (coerce r 'string)
+    collect (coerce (adjust-rock-stretches row (detect-round-rock-stretches row)) 'list)))
 
 (defun calculate-total-load (data)
   (loop
@@ -35,16 +39,23 @@ the left."
     for row in data
     sum (loop
 	  for i from n downto 1
-	  for c across row
+	  for c in row
 	  if (char= c #\O)
 	    sum i)))
 
 (defun puzzle-1 (&key (input *example-input-1*))
   (calculate-total-load
-   (tilt-north (parse-data input))))
+   (tilt-left (rotate-counterclockwise (parse-data input)))))
 
 (defun puzzle-2 (&key (input *example-input-2*))
-)
+  (let ((data (rotate-counterclockwise
+	       (rotate-counterclockwise (parse-data input)))))
+    (calculate-total-load
+     (rotate-clockwise
+      (loop
+	repeat 4000
+	do (setf data (tilt-left (rotate-clockwise data)))
+	finally (return data))))))
 
 ;;;; Data
 
@@ -163,6 +174,6 @@ O...#.OO.O##.O.....#.....O..O...#.O...O.#.....#.O....O.#...#OOOO..#.#O...O...##.
 #......#.#.....#O...O..#..#..###..O...##.OOO.O...#.O..#..##.O...#..O..O....O.......#OO.....#....OO..")
 
 (defvar *example-input-2*
- *example-input-1*)
+  *example-input-1*)
 
 (defvar *input-2* *input-1*)
