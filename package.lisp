@@ -69,3 +69,7 @@
 (defpackage #:advent-of-code-2023.day14
   (:nicknames #:aoc2023.day14)
   (:use #:cl #:util))
+
+(defpackage #:advent-of-code-2023.day15
+  (:nicknames #:aoc2023.day15)
+  (:use #:cl #:util))
