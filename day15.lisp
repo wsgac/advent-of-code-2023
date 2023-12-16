@@ -3,6 +3,20 @@
 (defun parse-data (data)
   (uiop:split-string data :separator '(#\, #\newline)))
 
+(defun parse-instruction (instruction)
+  (anaphora:acond
+    ((position #\- instruction)
+     (let ((label (subseq instruction 0 anaphora:it)))
+      (list :type :remove
+	    :label (alexandria:make-keyword label)
+	    :hash (hash-algorithm label))))
+    ((position #\= instruction)
+     (let ((label (subseq instruction 0 anaphora:it)))
+      (list :type :set
+	    :label (alexandria:make-keyword label)
+	    :hash (hash-algorithm label)
+	    :value (parse-integer (subseq instruction (1+ anaphora:it))))))))
+
 (defun hash-algorithm (string)
   (loop
     for hash = 0 then (mod (* 17 (+ hash (char-code c))) 256)
@@ -12,8 +26,30 @@
 (defun puzzle-1 (&key (input *example-input-1*))
   (reduce #'+ (mapcar #'hash-algorithm (parse-data input))))
 
+(defun calculate-focusing-power (state)
+  (loop
+	for (bi box) on state by #'cddr
+	sum (loop
+		  for slot from (/ (length box) 2) downto 1
+		  for (_ fl) on box by #'cddr
+		  sum (* (1+ bi) slot fl))))
+
+(defun apply-instruction (inst state)
+  (destructuring-bind (&key type label hash value) inst
+    (ecase type
+     (:set
+      (setf (getf (getf state hash) label) value))
+     (:remove
+      (alexandria:remove-from-plistf (getf state hash) label)))
+    state))
+
 (defun puzzle-2 (&key (input *example-input-2*))
-)
+  (loop
+    with state = nil
+    for raw-inst in (parse-data input)
+    for inst = (parse-instruction raw-inst)
+    do (setf state (apply-instruction inst state))
+    finally (return (calculate-focusing-power state))))
 
 ;;;; Data
 
