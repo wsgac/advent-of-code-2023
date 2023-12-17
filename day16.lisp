@@ -5,14 +5,16 @@
 
 (defun propagate-beam (beam array visited)
   (let* ((bearing (getf beam :bearing))
-	 (new-row (+ (getf beam :row) (imagpart bearing)))
-	 (new-col (+ (getf beam :column) (realpart bearing))))
+	 (new-row (- (getf beam :row) (imagpart bearing)))
+	 (new-col (+ (getf beam :column) (realpart bearing)))
+	 (beam (copy-list beam)))
+    ;; (setf (gethash beam visited) t)
     (setf (getf beam :row) new-row)
     (setf (getf beam :column) new-col)
     (when (and (ignore-errors (aref array new-row new-col))
 	       (not (gethash beam visited)))
       (setf (gethash beam visited) t)
-       beam)))
+      beam)))
 
 (defun handle-beam (beam array)
   (let* ((bearing (getf beam :bearing))
@@ -27,7 +29,7 @@
      (#\/ (let ((rot (if (zerop (imagpart bearing)) +i+ (- +i+))))
 	    (setf (getf beam :bearing) (* bearing rot))
 	    (list beam)))
-     (#\- (case (imagpart bearing)
+     (#\- (case (abs (imagpart bearing))
 	    ;; h
 	    (0
 	     (list beam))
@@ -38,7 +40,7 @@
 	       (setf (getf h1 :bearing) (* bearing +i+))
 	       (setf (getf h2 :bearing) (* bearing (- +i+)))
 	       (list h1 h2)))))
-     (#\| (case (imagpart bearing)
+     (#\| (case (abs (imagpart bearing))
 	    ;; h
 	    (0
 	     (let ((v1 (copy-list beam))
@@ -50,20 +52,27 @@
 	    (1
 	     (list beam)))))))
 
+(defun count-unique-fields (visited)
+  (loop
+	with h = (make-hash-table :test #'equal)
+	for k being the hash-keys in visited
+	do (setf (gethash (list (getf k :row) (getf k :column)) h) t)
+	finally (return (hash-table-count h))))
+
 (defun puzzle-1 (&key (input *example-input-1*))
   (let ((init '(:row 0 :column 0 :bearing 1)))
-   (loop
-     with array = (parse-string-into-array input)
-     with visited = (make-hash-table :test #'equal)
-     with beams = (list init)
-     initially (setf (gethash init visited) t)
-     while beams
-     do (print beams)
-     do (setf beams
-	      (remove nil
-	       (mapcar (alexandria:rcurry #'propagage-beam array visited)
-		       (mapcan (alexandria:rcurry #'handle-beam array) beams))))
-     finally (return visited))))
+    (loop
+      with array = (parse-string-into-array input)
+      with visited = (make-hash-table :test #'equalp)
+      with beams = (list init)
+	initially (setf (gethash init visited) t)
+      while beams
+      do (setf beams
+	       (remove nil
+		       (mapcar (alexandria:rcurry #'propagate-beam array visited)
+			       (mapcan (alexandria:rcurry #'handle-beam array) beams))))
+      finally (return (count-unique-fields visited))
+      )))
 
 (defun puzzle-2 (&key (input *example-input-2*))
   )
