@@ -59,10 +59,9 @@
 	do (setf (gethash (list (getf k :row) (getf k :column)) h) t)
 	finally (return (hash-table-count h))))
 
-(defun puzzle-1 (&key (input *example-input-1*))
-  (let ((init '(:row 0 :column 0 :bearing 1)))
-    (loop
-      with array = (parse-string-into-array input)
+(defun propagate-with-init (array init)
+  (loop
+      ;; with array = (parse-string-into-array input)
       with visited = (make-hash-table :test #'equalp)
       with beams = (list init)
 	initially (setf (gethash init visited) t)
@@ -72,10 +71,28 @@
 		       (mapcar (alexandria:rcurry #'propagate-beam array visited)
 			       (mapcan (alexandria:rcurry #'handle-beam array) beams))))
       finally (return (count-unique-fields visited))
-      )))
+      ))
+
+(defun puzzle-1 (&key (input *example-input-1*))
+  (let ((init '(:row 0 :column 0 :bearing 1))
+	(array (parse-string-into-array input)))
+    (propagate-with-init array init)))
 
 (defun puzzle-2 (&key (input *example-input-2*))
-  )
+  (let* ((array (parse-string-into-array input))
+	 (rows (array-dimension array 0))
+	 (cols (array-dimension array 1))
+	 (inits (append (loop
+			  for row from 0 below rows
+			  collect `(:row ,row :column 0 :bearing 1)
+			  collect `(:row ,row :column ,(1- cols) :bearing 1))
+			(loop
+			  for col from 0 below cols
+			  collect `(:row 0 :column ,col :bearing #c (0 -1))
+			  collect `(:row ,(1- rows) :column ,col :bearing #c (0 1))))))
+    (loop
+      for init in inits
+      maximize (propagate-with-init array init))))
 
 ;;;; Data
 
