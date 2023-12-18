@@ -7,6 +7,15 @@
 		(list (elt dir 0) (parse-integer len))))
 	  (split-lines data)))
 
+(defun parse-data-for-real-now (data)
+  (let ((dict #(#\R #\D #\L #\U))
+	(instructions nil))
+    (ppcre:do-register-groups (amount direction) ("\\(#([a-f0-9]{5})([a-f0-9])\\)" data)
+      (push (list (elt dict (parse-integer direction))
+		  (parse-integer amount :radix 16))
+	    instructions))
+    (reverse instructions)))
+
 (defun instructions-to-contour (instructions)
   (loop
     with row = 0
@@ -38,7 +47,11 @@
       (+ edge-length internal-points))))
 
 (defun puzzle-2 (&key (input *example-input-2*))
-  )
+  (multiple-value-bind (contour edge-length)
+      (instructions-to-contour (parse-data-for-real-now input))
+    (let* ((interior (shoelace contour))
+	   (internal-points (+ (abs interior) 1 (- (/ edge-length 2)))))
+      (+ edge-length internal-points))))
 
 ;;;; Data
 
