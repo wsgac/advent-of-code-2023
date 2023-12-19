@@ -71,6 +71,15 @@
 	sum (destructuring-bind (&key x m a s) part
 	      (+ x m a s)))))
 
+(defun find-acceptable-branches (nodes workflows)
+  (loop
+    for rule in (cdr (assoc (car nodes) workflows))
+    if (eql :a (getf rule :target))
+       do (push (cons rule nodes) acc)
+    else
+      do (find-acceptable-branches (cons rule nodes) workflows acc))
+  acc)
+
 (defun puzzle-2 (&key (input *example-input-2*))
   )
 
