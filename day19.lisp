@@ -27,7 +27,7 @@
 		   (list :type :jump
 			 :target (alexandria:make-keyword (string-upcase rule))))
 	       rules))
-	(push (list (alexandria:make-keyword (string-upcase workflow)) (reverse rules)) workflows)))
+	(push (cons (alexandria:make-keyword (string-upcase workflow)) (reverse rules)) workflows)))
     (reverse workflows)))
       ;; (([xmas][><][0-9]+:)?([a-zRA]),?)
 
@@ -55,7 +55,7 @@
 
 (defun part-accepted (part workflows)
   (loop
-    for w = :in then (workflow-apply (car (cdr (assoc w workflows))) part)
+    for w = :in then (workflow-apply (cdr (assoc w workflows)) part)
     if (eql w :a)
       do (return t)
     if (eql w :r)
@@ -72,16 +72,48 @@
 	      (+ x m a s)))))
 
 (defun find-acceptable-branches (nodes workflows)
-  (loop
-    for rule in (cdr (assoc (car nodes) workflows))
-    if (eql :a (getf rule :target))
-       do (push (cons rule nodes) acc)
-    else
-      do (find-acceptable-branches (cons rule nodes) workflows acc))
-  acc)
+  (cond
+    ((eql :a (getf (car nodes) :target))
+     (list (reverse nodes)))
+    ((eql :r (getf (car nodes) :target))
+     nil)
+    (t 
+     (loop
+       for step in (cdr (assoc (getf (car nodes) :target) workflows))
+       append (find-acceptable-branches (cons step nodes) workflows)))))
+
+(defun branch-multiplicity (branch)
+  (let ((range (list :x (list :min 1 :max 4000)
+		     :m (list :min 1 :max 4000)
+		     :a (list :min 1 :max 4000)
+		     :s (list :min 1 :max 4000))))
+    (loop
+      for step in (cdr branch)
+      if (eql :cond (getf step :type))
+	do (cond 
+	     ((eq (getf step :relation) #'<)
+	      ;; (format t "<: ~a~%" step)
+	      (let* ((c (getf step :characteristic))
+		     (cmax (getf (getf range c) :max))
+		     (val (getf step :value)))
+		(setf (getf (getf range c) :max) (min cmax val))))
+	     ((eq (getf step :relation) #'>)
+	      ;; (format t ">: ~a~%" step)
+	      (let* ((c (getf step :characteristic))
+		     (cmin (getf (getf range c) :min))
+		     (val (getf step :value)))
+		(setf (getf (getf range c) :min) (max cmin val))))))
+    (destructuring-bind (&key x m a s) range
+      (reduce #'*
+	      (mapcar #'(lambda (item)
+			  (1+ (- (getf item :max) (getf item :min))))
+		      (list x m a s))))))
 
 (defun puzzle-2 (&key (input *example-input-2*))
-  )
+  (let ((workflows (getf (parse-data input) :workflows)))
+   (reduce #'+
+	   (mapcar #'branch-multiplicity
+		   (find-acceptable-branches '((:target :in)) workflows)))))
 
 ;;;; Data
 
