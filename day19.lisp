@@ -16,20 +16,20 @@
     (ppcre:do-register-groups (workflow rulestring)
 	("([a-z]+){([0-9a-zAR\\:><,]+)}" raw)
       (let (rules)
-       (ppcre:do-register-groups (rule condition characteristic relation value target)
-	   ("((([xmas])([><])([0-9]+):)?([a-zAR]+)),?" rulestring)
-	 (push (if condition
-		   (list :type :cond
-			 :target (alexandria:make-keyword (string-upcase target))
-			 :characteristic (alexandria:make-keyword (string-upcase characteristic))
-			 :relation (symbol-function (find-symbol relation))
-			 :value (parse-integer value))
-		   (list :type :jump
-			 :target (alexandria:make-keyword (string-upcase rule))))
-	       rules))
+	(ppcre:do-register-groups (rule condition characteristic relation value target)
+	    ("((([xmas])([><])([0-9]+):)?([a-zAR]+)),?" rulestring)
+	  (push (if condition
+		    (list :type :cond
+			  :target (alexandria:make-keyword (string-upcase target))
+			  :characteristic (alexandria:make-keyword (string-upcase characteristic))
+			  :relation (symbol-function (find-symbol relation))
+			  :value (parse-integer value))
+		    (list :type :jump
+			  :target (alexandria:make-keyword (string-upcase rule))))
+		rules))
 	(push (cons (alexandria:make-keyword (string-upcase workflow)) (reverse rules)) workflows)))
     (reverse workflows)))
-      ;; (([xmas][><][0-9]+:)?([a-zRA]),?)
+;; (([xmas][><][0-9]+:)?([a-zRA]),?)
 
 (defun parse-data (data)
   (destructuring-bind (raw-workflows raw-parts)
@@ -50,7 +50,7 @@
 
     for result = (rule-apply rule part)
     if result
-       do (return result)
+      do (return result)
     finally (return result)))
 
 (defun part-accepted (part workflows)
@@ -71,6 +71,20 @@
 	sum (destructuring-bind (&key x m a s) part
 	      (+ x m a s)))))
 
+(defun negate-step (step)
+  (let ((complements (list #'> #'< #'< #'>)))
+    (case (getf step :type)
+      (:cond (let ((s (copy-list step))
+		   (r (getf step :relation))
+		   (v (getf step :value)))
+	       (setf (getf s :relation) (getf complements r))
+	       (setf (getf s :value)
+		     (if (eq r #'>)
+			 (1+ v)
+			 (1- v)))
+	       s))
+      (t step))))
+
 (defun find-acceptable-branches (nodes workflows)
   (cond
     ((eql :a (getf (car nodes) :target))
@@ -79,8 +93,9 @@
      nil)
     (t 
      (loop
+       for negated = nil then (cons (negate-step step) negated)
        for step in (cdr (assoc (getf (car nodes) :target) workflows))
-       append (find-acceptable-branches (cons step nodes) workflows)))))
+       append (find-acceptable-branches (append (list step) (reverse negated) nodes) workflows)))))
 
 (defun branch-multiplicity (branch)
   (let ((range (list :x (list :min 1 :max 4000)
@@ -96,13 +111,15 @@
 	      (let* ((c (getf step :characteristic))
 		     (cmax (getf (getf range c) :max))
 		     (val (getf step :value)))
-		(setf (getf (getf range c) :max) (min cmax val))))
+		(setf (getf (getf range c) :max) (min cmax (1- val)))))
 	     ((eq (getf step :relation) #'>)
 	      ;; (format t ">: ~a~%" step)
 	      (let* ((c (getf step :characteristic))
 		     (cmin (getf (getf range c) :min))
 		     (val (getf step :value)))
-		(setf (getf (getf range c) :min) (max cmin val))))))
+		(setf (getf (getf range c) :min) (max cmin (1+ val)))))))
+    ;; range
+    #-nil
     (destructuring-bind (&key x m a s) range
       (reduce #'*
 	      (mapcar #'(lambda (item)
@@ -110,10 +127,12 @@
 		      (list x m a s))))))
 
 (defun puzzle-2 (&key (input *example-input-2*))
-  (let ((workflows (getf (parse-data input) :workflows)))
-   (reduce #'+
+  (let* ((workflows (getf (parse-data input) :workflows))
+	 (branches
 	   (mapcar #'branch-multiplicity
-		   (find-acceptable-branches '((:target :in)) workflows)))))
+		   (find-acceptable-branches '((:target :in)) workflows))))
+    (reduce #'+ branches)))
+
 
 ;;;; Data
 

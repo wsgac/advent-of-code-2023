@@ -6,7 +6,8 @@
   :license  "Specify license here"
   :version "0.0.1"
   :serial t
-  :depends-on (:cl-ppcre :trivia :alexandria :array-operations :lisp-stat :anaphora)
+  :depends-on (:cl-ppcre :trivia :alexandria :array-operations :lisp-stat :anaphora ;; :fset
+			 )
   :components ((:file "package")
 	       (:file "util")
 	       (:file "day01")
